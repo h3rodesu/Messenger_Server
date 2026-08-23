@@ -21,6 +21,8 @@ public:
 	//Мб метод для подключения сделаю
 	bool registration(const std::string& login,const std::string&password);
 	void connectToDB() {}
+	std::vector<std::pair<std::string, std::string>> getHistory();//накопление сообщений
+	void saveHistory(std::vector<std::pair<std::string, std::string>>& hystory);//взять сообщения из бд
 	void changelog(std::string oldnick,std::string newnick);//для смены никнейма
 	~DataBase(){}
 };

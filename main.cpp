@@ -9,8 +9,10 @@ int main() {
 	pqxx::connection connect("dbname=Chat_Server_DataBase user=postgres password=1234 host=localhost port=5432");
 	DataBase myDB("dbname=Chat_Server_DataBase user=postgres password=1234 host=localhost port=5432");
 	std::string table = "CREATE TABLE IF NOT EXISTS users(log VARCHAR(64),pass BYTEA)";
+	std::string historyTable = "CREATE TABLE IF NOT EXISTS history(id SERIAL PRIMARY KEY,log VARCHAR(64),message TEXT)";
 	pqxx::work trans(connect);
 	trans.exec(table);
+	trans.exec(historyTable);
 	trans.commit();
 	std::cout << "Enter your port" << std::endl;
 	std::cin >> port;

@@ -2,7 +2,11 @@
 #include "HttpRequest.h"
 
 #include<memory>	
-ChatServer::ChatServer(int s, DataBase& d) :mysocket(INVALID_SOCKET), myport(s), pool(4), db(d) {}//4 потока
+ChatServer::ChatServer(int s, DataBase& d) :mysocket(INVALID_SOCKET), myport(s), pool(4), db(d) {
+	std::vector<std::pair<std::string,std::string>>loadData=db.getHistory();//получение архива сообщений 
+	this->deq.assign(loadData.begin(),loadData.end());//сообщения закидываются в деку,обновлять потом вектор для каждого соо невыгодно
+	std::cout << "Успешно загружен архив из " << this->deq.size() << " сообщений" << std::endl;
+}//4 потока
 bool ChatServer::init() {
 	WSADATA wsa;//Тут адрес 
 	int result = WSAStartup(MAKEWORD(2, 2), &wsa);//Инициализация из сети
@@ -87,44 +91,10 @@ void ChatServer::handlClient(std::shared_ptr<SafeSocket>mySocket) {//Фонов�
 	int flag = 1;
 	setsockopt(mySocket->get(), IPPROTO_TCP, TCP_NODELAY, (const char*)&flag, sizeof(flag));//изза малого объёма строки без флага TCP_NODELAY она не отправлялась первому клиенту
 	send(mySocket->get(), Welcome.c_str(), (int)Welcome.size(), 0);
-
-	//int recBytes = recv(mySocket->get(), rxBuffer, sizeof(rxBuffer) - 1, 0);//Тут инт т.к. здесь число прилетевших байт
-	//if (recBytes <= 0) {
-	//	{
-	//		std::unique_lock<std::mutex>myLock(this->mtx);
-	//		Map.erase(mySocket->get());//Метод get() был написан спциально для того чтобы моно было вызывать методы сокета для указателей
-	//		//closesocket(mySocket->get());//ЗДЕСЬ ЭТО НЕ НУЖНО,ЕСТЬ ДЕСТРУКТОР
-	//		
-	//	}
-	//	std::cerr << "Nickname trouble" << std::endl;
-	//	return;//Выход если клиент отключился или байты не дошли
-	//}
-	 
-	 
-	 
-	
-	//parser.parse(rxBuffer, size_t(recBytes));
-	////rxBuffer[recBytes] = '\0';	
-	//std::string nick(rxBuffer);//Перевели буфер в обычную строку
-	////std::string nick()
-	//if (!nick.empty() && nick.back() == '\n' || nick.back() == '\r') {
-	//	nick.pop_back();
-	//}
-	//if (nick.empty()) {
-	//	nick = "Default User" + std::to_string(mySocket->get());//Чтобы был дефолт юзер и номер его сокета например Defaut Socket 345 
-	//}
-	//else {
-	//	std::string added = "Welcome,dear " + nick + ", You can start chatting right now!";
-	//	send(mySocket->get(), added.c_str(), (int)added.size(), 0);
-	//}
-	//{
-	//	std::lock_guard<std::mutex>myLock(this->mtx);
-	//	Map[mySocket->get()] = nick;
-	//}
-	//
 	std::string nick;
 	try {
-		while (true) {
+		while (true) {//Блок регистрации
+			memset(rxBuffer, 0, sizeof(rxBuffer));
 			int recBytes = recv(mySocket->get(), rxBuffer, sizeof(rxBuffer) - 1, 0);
 			if (recBytes <= 0) {
 				{
@@ -146,6 +116,10 @@ void ChatServer::handlClient(std::shared_ptr<SafeSocket>mySocket) {//Фонов�
 						std::string nicelog = "Auth_OK|Successful authorization.";
 						send(mySocket->get(), nicelog.c_str(), (int)nicelog.size(), 0);
 						nick = parser.log;
+						for (const auto& it : this->deq) {
+							std::string sendarchive = "" + it.first + "| " + it.second + "\n";
+							send(mySocket->get(), sendarchive.c_str(), (int)sendarchive.size(), 0);
+						}
 						break;
 					}
 					else {
@@ -203,6 +177,7 @@ void ChatServer::processClientMsg(std::shared_ptr<SafeSocket>sock, std::string n
 	if (parser.command == "MSG") {//если прилеетло сообщение
 		std::string UserMsg = "" + nick + "| " + parser.message + "\n";//Передаем то что распарсил парсер в строку с сообщением и делаем перенос строки
 		this->MessageBroadCast(UserMsg, sock->get());
+		Archive(nick, parser.message);
 	}
 	else if (parser.command == "QUIT") {
 		std::string quitmes=""+nick+" leave from chat, bye-bye!";
@@ -221,10 +196,8 @@ void ChatServer::processClientMsg(std::shared_ptr<SafeSocket>sock, std::string n
 				std::unique_lock<std::mutex>myLock(this->mtx);
 				this->Map[sock->get()] = newNick;//так и так изменения нужно занести в мапу
 			}
-			{
-				std::unique_lock<std::mutex>bdosnova(this->mtx); 
+				std::unique_lock<std::mutex>bdosnova(this->mtx);//находится под мьютексом в dbmanage 
 				this->db.changelog(oldNick, newNick);
-			}
 			nick = newNick;
 			std::string nickmsg = "System: User " + oldNick + " change nickName to " + newNick + "\n";
 			this->MessageBroadCast(nickmsg, sock->get());
@@ -233,6 +206,19 @@ void ChatServer::processClientMsg(std::shared_ptr<SafeSocket>sock, std::string n
 	
 	}
 }
+void ChatServer::Archive(const std::string& nick, const std::string& message) {
+	std::lock_guard<std::mutex>myLock(this->historymtx);
+		deq.push_back({ nick,message });
+	if (deq.size() > 50) {
+		deq.pop_front();
+	}
+}
 ChatServer::~ChatServer() {
+	std::vector<std::pair<std::string, std::string>>save;
+	{
+	std::lock_guard<std::mutex>lockdb(this->historymtx);
+		save.assign(this->deq.begin(), this->deq.end());
+	}
+	db.saveHistory(save);//тут свой мьютекс
 	std::cout << "[WINSOCK] Сетевая библиотека удалена " << std::endl;
 }

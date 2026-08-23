@@ -30,6 +30,8 @@ public:
 	void clean() {
 		message.clear();
 		command.clear();
+		log.clear();
+		pass.clear();
 		current_stat = Status::COMMAND;
 }
 	~Pars() {
