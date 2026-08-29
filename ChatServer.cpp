@@ -87,15 +87,22 @@ void ChatServer::MessageBroadCast(const std::string& message, SOCKET sender) {
 void ChatServer::handlClient(std::shared_ptr<SafeSocket>mySocket) {//Фоновый поток для чтения через метод recv
 	char rxBuffer[1024];
 	Pars parser;
-	std::string Welcome = "Welcome!\n Enter your nickname and password: ";
-	int flag = 1;
-	setsockopt(mySocket->get(), IPPROTO_TCP, TCP_NODELAY, (const char*)&flag, sizeof(flag));//изза малого объёма строки без флага TCP_NODELAY она не отправлялась первому клиенту
-	send(mySocket->get(), Welcome.c_str(), (int)Welcome.size(), 0);
+	//std::string Welcome = "Welcome!\n Enter your nickname and password: ";
+	//int flag = 1;
+	//setsockopt(mySocket->get(), IPPROTO_TCP, TCP_NODELAY, (const char*)&flag, sizeof(flag));//изза малого объёма строки без флага TCP_NODELAY она не отправлялась первому клиенту
+	//send(mySocket->get(), Welcome.c_str(), (int)Welcome.size(), 0);
 	std::string nick;
 	try {
 		while (true) {//Блок регистрации
 			memset(rxBuffer, 0, sizeof(rxBuffer));
 			int recBytes = recv(mySocket->get(), rxBuffer, sizeof(rxBuffer) - 1, 0);
+			
+
+			//Для дебага!!!
+			std::cout << "Принято байт" << recBytes << std::endl;
+			std::cout << "Содержимое буфера" << std::endl;
+			//Для дебага!!!
+			
 			if (recBytes <= 0) {
 				{
 					std::lock_guard<std::mutex>myLock(this->mtx);
