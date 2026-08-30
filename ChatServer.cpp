@@ -184,8 +184,16 @@ void ChatServer::processClientMsg(std::shared_ptr<SafeSocket>sock, std::string n
 	if (parser.command == "MSG") {//если прилеетло сообщение
 		std::string UserMsg = "" + nick + "| " + parser.message + "\n";//Передаем то что распарсил парсер в строку с сообщением и делаем перенос строки
 		this->MessageBroadCast(UserMsg, sock->get());
-		Archive(nick, parser.message);
-	}
+		{
+		Archive(nick, parser.message);//Пуш в деку	
+			std::unique_lock<std::mutex>(this->mtx);
+			//std::string sm = std::move(parser.message);
+			pool.add([this,&nick, news=parser.message]() {
+				//db.DataBase::saveMsg(name, sm);
+				db.saveMsg(nick, news);
+				});
+		}
+		}
 	else if (parser.command == "QUIT") {
 		std::string quitmes=""+nick+" leave from chat, bye-bye!";
 		this->MessageBroadCast(quitmes, sock->get());
@@ -213,7 +221,7 @@ void ChatServer::processClientMsg(std::shared_ptr<SafeSocket>sock, std::string n
 	
 	}
 }
-void ChatServer::Archive(const std::string& nick, const std::string& message) {
+void ChatServer::Archive(const std::string& nick, const std::string& message) {//пуш в деку
 	std::lock_guard<std::mutex>myLock(this->historymtx);
 		deq.push_back({ nick,message });
 	if (deq.size() > 50) {
@@ -221,11 +229,11 @@ void ChatServer::Archive(const std::string& nick, const std::string& message) {
 	}
 }
 ChatServer::~ChatServer() {
-	std::vector<std::pair<std::string, std::string>>save;
-	{
-	std::lock_guard<std::mutex>lockdb(this->historymtx);
-		save.assign(this->deq.begin(), this->deq.end());
-	}
-	db.saveHistory(save);//тут свой мьютекс
+	//std::vector<std::pair<std::string, std::string>>save;//
+	//{
+	//std::lock_guard<std::mutex>lockdb(this->historymtx);
+	//	save.assign(this->deq.begin(), this->deq.end());
+	//}
+	//db.saveHistory(save);//тут свой мьютекс
 	std::cout << "[WINSOCK] Сетевая библиотека удалена " << std::endl;
 }

@@ -4,6 +4,7 @@
 #include<pqxx/pqxx>
 #include<vector>
 #include<mutex>
+#include<deque>
 #include<iostream>
 class DataBase {
 private:
@@ -22,7 +23,8 @@ public:
 	bool registration(const std::string& login,const std::string&password);
 	void connectToDB() {}
 	std::vector<std::pair<std::string, std::string>> getHistory();//накопление сообщений
-	void saveHistory(std::vector<std::pair<std::string, std::string>>& hystory);//взять сообщения из бд
+	//void saveHistory(std::vector<std::pair<std::string, std::string>>& hystory);//взять сообщения из бд
 	void changelog(std::string oldnick,std::string newnick);//для смены никнейма
+	void saveMsg(const std::string&nick,const std::string&mes);
 	~DataBase(){}
 };

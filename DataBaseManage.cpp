@@ -48,14 +48,20 @@ std::vector<std::pair<std::string, std::string>> DataBase::getHistory() {
 	}
 	return getm;
 }
-void DataBase::saveHistory(std::vector<std::pair<std::string, std::string>>& history) {//перед этим заполнить вектор данными из деки
-	std::lock_guard<std::mutex>myLock(this->dbmtx);
+//void DataBase::saveHistory(std::vector<std::pair<std::string, std::string>>& history) {//перед этим заполнить вектор данными из деки
+//	std::lock_guard<std::mutex>myLock(this->dbmtx);
+//	pqxx::connection connect(this->conn);
+//	pqxx::work tx(connect);
+//	std::string del = "TRUNCATE TABLE history";
+//	tx.exec(del);
+//	for (auto iter= history.begin(); iter != history.end(); iter++) {
+//		tx.exec_params("INSERT INTO history(log,message) VALUES ($1,$2)", iter->first, iter->second);
+//	}
+//	tx.commit();
+//}
+void DataBase::saveMsg(const std::string& name,const std::string& mes) {
 	pqxx::connection connect(this->conn);
 	pqxx::work tx(connect);
-	std::string del = "TRUNCATE TABLE history";
-	tx.exec(del);
-	for (auto iter= history.begin(); iter != history.end(); iter++) {
-		tx.exec_params("INSERT INTO history(log,message) VALUES ($1,$2)", iter->first, iter->second);
-	}
+	tx.exec_params("INSERT INTO history (log,message) VALUES($1,$2) ", name, mes);//Сохранить 1 соо
 	tx.commit();
 }
