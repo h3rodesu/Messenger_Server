@@ -8,11 +8,15 @@ int main() {
 	int port;
 	pqxx::connection connect("dbname=Chat_Server_DataBase user=postgres password=1234 host=localhost port=5432");
 	DataBase myDB("dbname=Chat_Server_DataBase user=postgres password=1234 host=localhost port=5432");
-	std::string table = "CREATE TABLE IF NOT EXISTS users(log VARCHAR(64),pass BYTEA)";
-	std::string historyTable = "CREATE TABLE IF NOT EXISTS history(id SERIAL PRIMARY KEY,log VARCHAR(64),message TEXT)";
+	std::string usersTable = "CREATE TABLE IF NOT EXISTS users(id SERIAL PRIMARY KEY,log VARCHAR(64),pass BYTEA)";
+	std::string roomsTable = "CREATE TABLE IF NOT EXISTS room(id SERIAL PRIMARY KEY,room_name VARCHAR(64) NOT NULL)";
+	std::string historyTable = "CREATE TABLE IF NOT EXISTS history(id SERIAL PRIMARY KEY,user_id INT REFERENCES users(id) ON DELETE CASCADE,message TEXT,room_id INT REFERENCES room(id) ON DELETE CASCADE)";
+	std::string firstIndex = "CREATE INDEX IF NOT EXISTS idx_hist_room_id ON history(room_id)";
 	pqxx::work trans(connect);
-	trans.exec(table);
+	trans.exec(usersTable);
+	trans.exec(roomsTable);
 	trans.exec(historyTable);
+	trans.exec(firstIndex);
 	trans.commit();
 	std::cout << "Enter your port" << std::endl;
 	std::cin >> port;

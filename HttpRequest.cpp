@@ -8,6 +8,9 @@ void Pars::parse(const char* buffer, size_t size) {
 				if (command == "MSG") {
 					current_stat = Status::MSG;
 				}
+				else if (command == "CURRENT_ROOM") {
+					current_stat = Status::CURRENT_ROOM;
+				}
 				else if (command == "QUIT") {
 					current_stat = Status::QUIT;
 				}
@@ -66,6 +69,17 @@ else if (c != '\r') {
 			else if (c == '\n') {
 				current_stat = Status::COMPLETE;
 				
+			}
+			break;
+		case Status::CURRENT_ROOM:
+			if (c == '\r') {
+
+			}
+			else if (c == '\n') {
+				current_stat = Status::COMPLETE;
+			}
+			else {
+				this->roomNum.push_back(c);
 			}
 			break;
 		}

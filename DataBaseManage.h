@@ -22,9 +22,9 @@ public:
 	//Мб метод для подключения сделаю
 	bool registration(const std::string& login,const std::string&password);
 	void connectToDB() {}
-	std::vector<std::pair<std::string, std::string>> getHistory();//накопление сообщений
+	std::vector<std::pair<std::string, std::string>> getHistory(int room);//накопление сообщений
 	//void saveHistory(std::vector<std::pair<std::string, std::string>>& hystory);//взять сообщения из бд
 	void changelog(std::string oldnick,std::string newnick);//для смены никнейма
-	void saveMsg(const std::string&nick,const std::string&mes);
+	void saveMsg(int nick_id,const std::string&mes,int room_id);
 	~DataBase(){}
 };

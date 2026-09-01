@@ -10,12 +10,19 @@
 #include"ThreadPool.h"
 #include "HttpRequest.h"
 #include "DataBaseManage.h"
+struct Session {};
 class ChatServer {
+public:
+	struct Session {
+		std::string name;
+		int userId = 0;
+		int roomId = 0;
+	};
 private:
 	SafeSocket mysocket;
 	std::mutex mtx;
 	std::mutex historymtx;
-	std::map<SOCKET,std::string> Map;
+	std::map<SOCKET,Session> Map;
 	int myport;//Порт-просто число
 	ThreadPool pool;
 	void processClientMsg(std::shared_ptr<SafeSocket>sockm, std::string nick);
@@ -26,7 +33,7 @@ public:
 	bool init();//Инициализация winsock,bind и listen
 void start();//цикл для ацептов,главный поток,получил клиентский сокет-завернул в лямбду и передал в фоновый поток,ТОЛЬКО ОЖИДАНЕИ И ПРИЕМ КЛИЕНТОВ
 	void handlClient(std::shared_ptr<SafeSocket>mySocket);//ПРиём сокетов клиентов через мув чтобы закинуть в поток пула,фоновй поток внутри пула
-	void MessageBroadCast(const std::string& message, SOCKET sender);//Метод для рассылки
-	void Archive(const std::string& login, const std::string& msg);
+	void MessageBroadCast(const std::string& message, SOCKET sender,int room_id);//Метод для рассылки
+	//void Archive(const std::string& login, const std::string& msg);
 	~ChatServer();
 };

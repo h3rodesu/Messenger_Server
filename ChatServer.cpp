@@ -3,9 +3,14 @@
 
 #include<memory>	
 ChatServer::ChatServer(int s, DataBase& d) :mysocket(INVALID_SOCKET), myport(s), pool(4), db(d) {
-	std::vector<std::pair<std::string,std::string>>loadData=db.getHistory();//получение архива сообщений 
-	this->deq.assign(loadData.begin(),loadData.end());//сообщения закидываются в деку,обновлять потом вектор для каждого соо невыгодно
-	std::cout << "Успешно загружен архив из " << this->deq.size() << " сообщений" << std::endl;
+	//int currentRoom;
+	//{
+	//	std::lock_guard<std::mutex>maplock(this->mtx);
+	//	currentRoom = this->Map[mysocket.get()].roomId;
+	//}
+	//std::vector<std::pair<std::string,std::string>>loadData=db.getHistory(currentRoom);//получение архива сообщений 
+	//this->deq.assign(loadData.begin(),loadData.end());//сообщения закидываются в деку,обновлять потом вектор для каждого соо невыгодно
+	//std::cout << "Успешно загружен архив из " << this->deq.size() << " сообщений" << std::endl;
 }//4 потока
 bool ChatServer::init() {
 	WSADATA wsa;//Тут адрес 
@@ -73,24 +78,22 @@ void ChatServer::start() {//Работа с клиентом
 	
 	}
 }
-void ChatServer::MessageBroadCast(const std::string& message, SOCKET sender) {
+void ChatServer::MessageBroadCast(const std::string& message, SOCKET sender,int room_id) {//sender-сокет отправителя
 	std::lock_guard<std::mutex>myLock(this->mtx);
-	for (const auto& read : this->Map) {
+	for (const auto& read : this->Map) {//first-сокет 2-Session
 		SOCKET clientsock = read.first;
 		if (clientsock == sender) {//чтобы не отправить сообщение отпрпаителю этого же сообщения
 			continue;
 		}
-		send(clientsock, message.c_str(), (int)message.size(), 0);
-	}
+		if (read.second.roomId==room_id) {
+			send(clientsock, message.c_str(), (int)message.size(), 0);
+		}
+		}
 }
 
-void ChatServer::handlClient(std::shared_ptr<SafeSocket>mySocket) {//Фоновый поток для чтения через метод recv
+void ChatServer::handlClient(std::shared_ptr<SafeSocket>mySocket) {//Фоновый поток отправки
 	char rxBuffer[1024];
 	Pars parser;
-	//std::string Welcome = "Welcome!\n Enter your nickname and password: ";
-	//int flag = 1;
-	//setsockopt(mySocket->get(), IPPROTO_TCP, TCP_NODELAY, (const char*)&flag, sizeof(flag));//изза малого объёма строки без флага TCP_NODELAY она не отправлялась первому клиенту
-	//send(mySocket->get(), Welcome.c_str(), (int)Welcome.size(), 0);
 	std::string nick;
 	try {
 		while (true) {//Блок регистрации
@@ -117,16 +120,12 @@ void ChatServer::handlClient(std::shared_ptr<SafeSocket>mySocket) {//Фонов�
 					if (this->db.signin(parser.log, parser.pass)) {
 						{
 							std::lock_guard<std::mutex>myLock(this->mtx);
-							this->Map[mySocket->get()] = parser.log;
+							this->Map[mySocket->get()].name = parser.log;
 						
 						}
 						std::string nicelog = "Auth_OK|Successful authorization.";
 						send(mySocket->get(), nicelog.c_str(), (int)nicelog.size(), 0);
 						nick = parser.log;
-						for (const auto& it : this->deq) {
-							std::string sendarchive = "" + it.first + "| " + it.second + "\n";
-							send(mySocket->get(), sendarchive.c_str(), (int)sendarchive.size(), 0);
-						}
 						break;
 					}
 					else {
@@ -140,19 +139,34 @@ void ChatServer::handlClient(std::shared_ptr<SafeSocket>mySocket) {//Фонов�
 					if (this->db.registration(parser.log, parser.pass)) {
 						{
 							std::lock_guard<std::mutex>myLock(this->mtx);
-							this->Map[mySocket->get()] = parser.log;
+							this->Map[mySocket->get()].name = parser.log;
 						}
 						std::string nicelog = "Register_OK|Successful registration.";
 						send(mySocket->get(), nicelog.c_str(), (int)nicelog.size(), 0);
 						nick = parser.log;
+						/*
 						std::string succreg ="Succesfull registration!";
-						send(mySocket->get(), succreg.c_str(), (int)succreg.size(), 0);
+						send(mySocket->get(), succreg.c_str(), (int)succreg.size(), 0);*/
 						break;
 					}
 					std::string errorreg = "This login is used,try to use another login.";
 					send(mySocket->get(), errorreg.c_str(), (int)errorreg.size(), 0);
 					parser.clean();
 				}
+				else if (parser.command == "CURRENT_ROOM") {
+					int cr = std::stoi(parser.roomNum);
+					{
+						std::lock_guard<std::mutex>myLock(this->mtx);
+						this->Map[mySocket->get()].roomId = cr;
+					}
+					std::vector<std::pair<std::string, std::string>>gh = db.getHistory(cr);
+
+					for (const auto& it : gh) {
+						std::string sendarchive = "" + it.first + "| " + it.second + "\n";
+						send(mySocket->get(), sendarchive.c_str(), (int)sendarchive.size(), 0);
+					}
+					parser.clean();
+					}
 			}
 		}
 	}
@@ -160,80 +174,75 @@ void ChatServer::handlClient(std::shared_ptr<SafeSocket>mySocket) {//Фонов�
 		std::cerr << "Краш бд " << e.what() << std::endl;
 	}
 	std::string SysMsg = "System: Greet User " + nick + "  ,now he is in the chat! ";
-	this->MessageBroadCast(SysMsg, mySocket->get());
+	int curRoom = 0;
+	{
+		std::lock_guard<std::mutex>lockmap(this->mtx);
+	curRoom= this->Map[mySocket->get()].roomId;
+	}
+	this->MessageBroadCast(SysMsg, mySocket->get(),curRoom);
 	this->processClientMsg(mySocket, nick);
 }
 void ChatServer::processClientMsg(std::shared_ptr<SafeSocket>sock, std::string nick) {
 	char buf[1024];
+	int curRoom;
+	{
+		std::lock_guard<std::mutex>maplock(this->mtx);
+		curRoom = this->Map[sock->get()].roomId;
+	}
 	Pars parser;
 	while (true) {
-	int rec=recv(sock->get(), buf, sizeof(buf) - 1, 0);
-	if (rec <=0) {
-		std::cerr<<"WARNING!" << WSAGetLastError() << std::endl;
-		std::cout << "User " << nick << " left" << std::endl;
-		std::unique_lock<std::mutex>myLock(this->mtx);
-		this->Map.erase(sock->get());//Удаление сокета из мапы чтобы вышедшему пользователю не отправялиоись сообщения
-		break;//Из бесконечного цикла
-	}
-	else {
-		buf[rec] = '\0';
-		std::cout<<nick<<": "<< buf << std::endl;
-	}
-	parser.clean();//Очстка строк
-	parser.parse(buf, (size_t)rec);//парсим прилетевшую информацию
-	if (parser.command == "MSG") {//если прилеетло сообщение
-		std::string UserMsg = "" + nick + "| " + parser.message + "\n";//Передаем то что распарсил парсер в строку с сообщением и делаем перенос строки
-		this->MessageBroadCast(UserMsg, sock->get());
-		{
-		Archive(nick, parser.message);//Пуш в деку	
-			std::unique_lock<std::mutex>(this->mtx);
-			//std::string sm = std::move(parser.message);
-			pool.add([this,&nick, news=parser.message]() {
-				//db.DataBase::saveMsg(name, sm);
-				db.saveMsg(nick, news);
+		int rec = recv(sock->get(), buf, sizeof(buf) - 1, 0);
+		if (rec <= 0) {
+			std::cerr << "WARNING!" << WSAGetLastError() << std::endl;
+			std::cout << "User " << nick << " left" << std::endl;
+			std::unique_lock<std::mutex>myLock(this->mtx);
+			this->Map.erase(sock->get());//Удаление сокета из мапы чтобы вышедшему пользователю не отправялиоись сообщения
+			break;//Из бесконечного цикла
+		}
+		else {
+			buf[rec] = '\0';
+			std::cout << nick << ": " << buf << std::endl;
+		}
+		parser.clean();//Очстка строк
+		parser.parse(buf, (size_t)rec);//парсим прилетевшую информацию
+		if (parser.command == "MSG") {//если прилеетло сообщение
+			std::string UserMsg = "" + nick + "| " + parser.message + "\n";//Передаем то что распарсил парсер в строку с сообщением и делаем перенос строки
+			this->MessageBroadCast(UserMsg, sock->get(), curRoom);
+			int userid;
+			{
+				std::lock_guard<std::mutex>maplock(this->mtx);
+				userid = Map[sock->get()].userId;
+			}
+			pool.add([this, userid, parser, curRoom]() {//у очереди свой мьютекс
+				db.saveMsg(userid, parser.message, curRoom);//у бд свой мьютекс
 				});
 		}
-		}
-	else if (parser.command == "QUIT") {
-		std::string quitmes=""+nick+" leave from chat, bye-bye!";
-		this->MessageBroadCast(quitmes, sock->get());
-		{
-			std::unique_lock<std::mutex>myLock(this->mtx);
-			this->Map.erase(sock->get());
-		}
-		break;
-	}
-	else if (parser.command == "CHANGE_NICK") {//а сам ник после | распарсится как сообщение
-		std::string newNick = parser.message;
-		if (!newNick.empty()) {
-			std::string oldNick = nick;
+		else if (parser.command == "QUIT") {
+			std::string quitmes = "" + nick + " leave from chat, bye-bye!";
+			this->MessageBroadCast(quitmes, sock->get(), curRoom);
 			{
 				std::unique_lock<std::mutex>myLock(this->mtx);
-				this->Map[sock->get()] = newNick;//так и так изменения нужно занести в мапу
+				this->Map.erase(sock->get());
 			}
+			break;
+		}
+		else if (parser.command == "CHANGE_NICK") {//а сам ник после | распарсится как сообщение
+			std::string newNick = parser.message;
+			if (!newNick.empty()) {
+				std::string oldNick = nick;
+				{
+					std::unique_lock<std::mutex>myLock(this->mtx);
+					this->Map[sock->get()].name = newNick;//так и так изменения нужно занести в мапу
+				}
 				std::unique_lock<std::mutex>bdosnova(this->mtx);//находится под мьютексом в dbmanage 
 				this->db.changelog(oldNick, newNick);
-			nick = newNick;
-			std::string nickmsg = "System: User " + oldNick + " change nickName to " + newNick + "\n";
-			this->MessageBroadCast(nickmsg, sock->get());
+				nick = newNick;
+				std::string nickmsg = "System: User " + oldNick + " change nickName to " + newNick + "\n";
+				this->MessageBroadCast(nickmsg, sock->get(), curRoom);
+			}
 		}
 	}
-	
+}
+	ChatServer::~ChatServer(){
+		std::cout << "[WINSOCK] Сетевая библиотека удалена " << std::endl;
 	}
-}
-void ChatServer::Archive(const std::string& nick, const std::string& message) {//пуш в деку
-	std::lock_guard<std::mutex>myLock(this->historymtx);
-		deq.push_back({ nick,message });
-	if (deq.size() > 50) {
-		deq.pop_front();
-	}
-}
-ChatServer::~ChatServer() {
-	//std::vector<std::pair<std::string, std::string>>save;//
-	//{
-	//std::lock_guard<std::mutex>lockdb(this->historymtx);
-	//	save.assign(this->deq.begin(), this->deq.end());
-	//}
-	//db.saveHistory(save);//тут свой мьютекс
-	std::cout << "[WINSOCK] Сетевая библиотека удалена " << std::endl;
-}

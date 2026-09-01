@@ -9,7 +9,8 @@ COMMAND,
 COMPLETE,
 AUTHORIZATION,
 AUTH_LOG,
-AUTH_PASS
+AUTH_PASS,
+CURRENT_ROOM
 };
 class Pars {
 private:
@@ -22,6 +23,7 @@ public:
 	std::string command;
 	std::string log;
 	std::string pass;
+	std::string roomNum;
 	//std::map<std::string, std::string>headers;
 	void parse(const char* buffer, size_t size);//Принимает массив символов
 	bool isComplete() const	{//Проверка на завершение парсинга
@@ -33,7 +35,8 @@ public:
 		log.clear();
 		pass.clear();
 		current_stat = Status::COMMAND;
-}
+		roomNum.clear();
+	}
 	~Pars() {
 		std::cout<<"[Parser] has been Deleted"<<std::endl;
 }

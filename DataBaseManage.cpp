@@ -21,7 +21,7 @@ bool DataBase::registration(const std::string& login, const std::string& passwor
 	if (logfind.empty()) {//Если логин не найден
 		tx.exec_params("INSERT INTO users(log,pass) VALUES($1,digest($2,'sha256'))", login, password);
 		tx.commit();
-		return true;
+		return true;         
 	}
 		return false;
 }
@@ -32,36 +32,25 @@ void DataBase::changelog(std::string oldnick, std::string newnick) {
 	tx.exec_params("UPDATE users SET log=$1 WHERE log=$2", newnick, oldnick);//позже заменить exec_params
 	tx.commit();
 }
-std::vector<std::pair<std::string, std::string>> DataBase::getHistory() {	
+std::vector<std::pair<std::string, std::string>> DataBase::getHistory(int room) {
 	std::lock_guard<std::mutex>myLock(this->dbmtx);
 	pqxx::connection connect(this->conn);
 	pqxx::work tx(connect);
-	std::vector<std::pair<std::string , std::string>>getm;
-	pqxx::result res=tx.exec("SELECT log,message FROM history ORDER BY id DESC LIMIT 50");
+	std::vector<std::pair<std::string, std::string>>getm;
+	pqxx::result res = tx.exec_params("SELECT users.log,history.message FROM history INNER JOIN users ON history.user_id=users.id WHERE history.room_id=$1 ORDER BY history.id DESC LIMIT 50", room);
 	if (!res.empty()) {
-		for (auto row = res.rbegin(); row != res.rend(); row++) {//от конца к начаул по тому что взяли из бд
+		for (auto row = res.rbegin(); row != res.rend(); row++) {
 			const auto& read = *row;//Разъименование,вектор не работал с обычным row.as<string>
 			std::string nick = read[0].as<std::string>();
-			std::string message = read[1].as<std::string>();
-			getm.push_back({nick,message});
+			std::string mes = read[1].as<std::string>();
+			getm.push_back({ nick, mes });
 		}
 	}
-	return getm;
-}
-//void DataBase::saveHistory(std::vector<std::pair<std::string, std::string>>& history) {//перед этим заполнить вектор данными из деки
-//	std::lock_guard<std::mutex>myLock(this->dbmtx);
-//	pqxx::connection connect(this->conn);
-//	pqxx::work tx(connect);
-//	std::string del = "TRUNCATE TABLE history";
-//	tx.exec(del);
-//	for (auto iter= history.begin(); iter != history.end(); iter++) {
-//		tx.exec_params("INSERT INTO history(log,message) VALUES ($1,$2)", iter->first, iter->second);
-//	}
-//	tx.commit();
-//}
-void DataBase::saveMsg(const std::string& name,const std::string& mes) {
+		return getm;
+	}
+void DataBase::saveMsg(int nameid,const std::string& mes,int room_id) {
 	pqxx::connection connect(this->conn);
 	pqxx::work tx(connect);
-	tx.exec_params("INSERT INTO history (log,message) VALUES($1,$2) ", name, mes);//Сохранить 1 соо
+	tx.exec_params("INSERT INTO history (user_id,message,room_id) VALUES($1,$2,$3) ", nameid, mes,room_id);//Сохранить 1 соо
 	tx.commit();
 }
