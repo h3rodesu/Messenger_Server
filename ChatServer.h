@@ -12,17 +12,16 @@
 #include "DataBaseManage.h"
 struct Session {};
 class ChatServer {
-public:
 	struct Session {
 		std::string name;
-		int userId = 0;
-		int roomId = 0;
+		int userId = 1;
+		int roomId=0;
 	};
 private:
 	SafeSocket mysocket;
 	std::mutex mtx;
 	std::mutex historymtx;
-	std::map<SOCKET,Session> Map;
+	std::map<SOCKET, Session> Map;
 	int myport;//Порт-просто число
 	ThreadPool pool;
 	void processClientMsg(std::shared_ptr<SafeSocket>sockm, std::string nick);
@@ -36,4 +35,5 @@ void start();//цикл для ацептов,главный поток,полу
 	void MessageBroadCast(const std::string& message, SOCKET sender,int room_id);//Метод для рассылки
 	//void Archive(const std::string& login, const std::string& msg);
 	~ChatServer();
+	
 };

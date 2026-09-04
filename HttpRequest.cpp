@@ -8,17 +8,23 @@ void Pars::parse(const char* buffer, size_t size) {
 				if (command == "MSG") {
 					current_stat = Status::MSG;
 				}
+				else if (command == "START_LS") {
+					current_stat = Status::START_LS;
+				}
 				else if (command == "CURRENT_ROOM") {
 					current_stat = Status::CURRENT_ROOM;
 				}
 				else if (command == "QUIT") {
 					current_stat = Status::QUIT;
-				}
+				}	
 				else if (command == "CHANGE_NICK") {
 					current_stat = Status::CHANGE_NICK;
 				}
 				else if (command == "SIGNIN" || command=="REGISTRATION") {
 					current_stat = Status::AUTHORIZATION;
+				}
+				else if (command == "FIND_USER") {
+					current_stat = Status::FIND_USER;
 				}
 			}
 			else if (c == '\n' || c == '\r') {
@@ -34,6 +40,8 @@ void Pars::parse(const char* buffer, size_t size) {
 		case Status::MSG:
 		case Status::CHANGE_NICK:
 		case Status::QUIT:
+		case Status::FIND_USER:
+		case Status::START_LS:
 			if (c == '\r') {
 				//скип
 			}
@@ -73,7 +81,7 @@ else if (c != '\r') {
 			break;
 		case Status::CURRENT_ROOM:
 			if (c == '\r') {
-
+				
 			}
 			else if (c == '\n') {
 				current_stat = Status::COMPLETE;

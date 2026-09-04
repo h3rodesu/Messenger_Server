@@ -10,7 +10,9 @@ COMPLETE,
 AUTHORIZATION,
 AUTH_LOG,
 AUTH_PASS,
-CURRENT_ROOM
+CURRENT_ROOM,
+FIND_USER,
+START_LS
 };
 class Pars {
 private:
@@ -24,6 +26,7 @@ public:
 	std::string log;
 	std::string pass;
 	std::string roomNum;
+	
 	//std::map<std::string, std::string>headers;
 	void parse(const char* buffer, size_t size);//Принимает массив символов
 	bool isComplete() const	{//Проверка на завершение парсинга

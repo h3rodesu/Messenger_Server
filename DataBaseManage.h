@@ -13,18 +13,21 @@ private:
 	//pqxx::connection& conn;
 	std::string conn;//данные для подключения к бд
 	std::mutex dbmtx;//Если 2 потока будут работать с данными пользователя
-	
+
 public:
 	DataBase(const std::string con) :conn(con) {}
 	//Хэш будет реализован самой бд
 	//void getHash(const std::string& nickname, const std::string& password);//сделать хэш
 	bool signin(const std::string& nickname, const std::string& password);//Вернет результат подключения
 	//Мб метод для подключения сделаю
-	bool registration(const std::string& login,const std::string&password);
+	bool registration(const std::string& login, const std::string& password);
 	void connectToDB() {}
 	std::vector<std::pair<std::string, std::string>> getHistory(int room);//накопление сообщений
 	//void saveHistory(std::vector<std::pair<std::string, std::string>>& hystory);//взять сообщения из бд
-	void changelog(std::string oldnick,std::string newnick);//для смены никнейма
-	void saveMsg(int nick_id,const std::string&mes,int room_id);
-	~DataBase(){}
+	void changelog(std::string oldnick, std::string newnick);//для смены никнейма
+	void saveMsg(int nick_id, const std::string& mes, int room_id);
+	int finduser(std::string& name);
+	int createRoom(int fid, int secid);
+
+	~DataBase() {}
 };

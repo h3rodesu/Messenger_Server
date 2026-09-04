@@ -18,7 +18,7 @@ int main() {
 	trans.exec(historyTable);
 	trans.exec(firstIndex);
 	trans.commit();
-	std::cout << "Enter your port" << std::endl;
+	std::cout << "Enter your port" << std::endl;																			
 	std::cin >> port;
 	ChatServer myServer(port,myDB);
 	if (!myServer.init()) {//Если возниклас ошибка с инициализицей
