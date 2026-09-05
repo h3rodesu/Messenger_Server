@@ -65,7 +65,7 @@ void DataBase::saveMsg(int nameid, const std::string& mes, int room_id) {
 int DataBase::finduser(std::string&name) {
 	pqxx::connection connect(this->conn);
 	pqxx::work tx(connect);
-	int findid;
+	int findid=-1;//на всякий,чтобы в случае чего метод вернул что в бд пусто
 	pqxx::result res=tx.exec_params("SELECT id FROM users WHERE  log=$1",name);
 	if (!res.empty()) {
 		 auto row = res;	

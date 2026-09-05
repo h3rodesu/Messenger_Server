@@ -198,7 +198,8 @@ void ChatServer::processClientMsg(std::shared_ptr<SafeSocket>sock, std::string n
 		parser.clean();//Очстка строк
 		parser.parse(buf, (size_t)rec);//парсим прилетевшую информацию
 		if (parser.command == "MSG") {//если прилеетло сообщение
-			std::string UserMsg = "" + nick + "| " + parser.message + "\n";//Передаем то что распарсил парсер в строку с сообщением и делаем перенос строки
+			std::string realmsg = parser.message;
+			std::string UserMsg = "" + nick + "| " + realmsg + "\n";//Передаем то что распарсил парсер в строку с сообщением и делаем перенос строки
 			{
 			std::lock_guard<std::mutex>roomloc(this->mtx);
 			curRoom = this->Map[sock->get()].roomId;
@@ -209,15 +210,15 @@ void ChatServer::processClientMsg(std::shared_ptr<SafeSocket>sock, std::string n
 			{
 				std::lock_guard<std::mutex>maplock(this->mtx);
 				userid = Map[sock->get()].userId;
-				curroom = this->Map[sock->get()].roomId;
 			}
 			
 			std::cout << "userid " << userid << ' ' << std::endl;
-			std::cout << "current room" << curroom << ' '<<std::endl;
+			std::cout << "current room" << curRoom << ' '<<std::endl;
 			std::cout << "Сообщение еще не в пуле" << std::endl;
-			pool.add([this, userid, parser, curRoom]() {//у очереди свой мьютекс
-				std::cout << "Сообщеие в пуле,не сохранено в бд" << std::endl;
-				db.saveMsg(userid, parser.message, curRoom);//у бд свой мьютекс
+			//pool.add([this, userid, parser, curRoom]() {//у очереди свой мьютекс
+			pool.add([this, userid,movemsg=std::move(realmsg), curRoom]() {//у очереди свой мьютекс	
+			std::cout << "Сообщеие в пуле,не сохранено в бд" << std::endl;
+				db.saveMsg(userid, movemsg, curRoom);//у бд свой мьютекс
 				std::cout << "Сообщение в бд" << std::endl;
 				});
 		}
@@ -238,8 +239,8 @@ void ChatServer::processClientMsg(std::shared_ptr<SafeSocket>sock, std::string n
 					std::unique_lock<std::mutex>myLock(this->mtx);
 					this->Map[sock->get()].name = newNick;//так и так изменения нужно занести в мапу
 				}
-				std::unique_lock<std::mutex>bdosnova(this->mtx);//находится под мьютексом в dbmanage 
-				this->db.changelog(oldNick, newNick);
+				
+				this->db.changelog(oldNick, newNick);//находится под мьютексом в dbmanage 
 				nick = newNick;
 				std::string nickmsg = "System: User " + oldNick + " change nickName to " + newNick + "\n";
 				this->MessageBroadCast(nickmsg, sock->get(), curRoom);
@@ -265,12 +266,7 @@ void ChatServer::processClientMsg(std::shared_ptr<SafeSocket>sock, std::string n
 			std::cout << "запрос в бд еще не отправлен" << std::endl;
 			int getid=this->db.createRoom(userPasId, curid);//получаю айди этого чата
 			std::cout << "запрос в бд отправлен" << std::endl;
-			/*{
-				std::lock_guard<std::mutex>testidroom(this->mtx);
-				this->Map[sock->get()].roomId = getid;
-			}
-			std::cout <<"ВСТАВИЛ В МАПУ " << getid;
-		*/	std::cout << "ID РУМЫ В МАП " << this->Map[sock->get()].roomId;
+		std::cout << "ID РУМЫ В МАП " << this->Map[sock->get()].roomId;
 			std::string sendid = "NEW_ROOM|"+std::to_string(getid)+"\n";
 			std::cout << "NEW_ROOM text " << sendid << std::endl;
 			send(sock->get(), sendid.c_str(), (int)sendid.size(), 0);
@@ -278,7 +274,7 @@ void ChatServer::processClientMsg(std::shared_ptr<SafeSocket>sock, std::string n
 		}
 		else if (parser.command == "CURRENT_ROOM") {
 			std::string realid = parser.roomNum;
-			int currentsocket = this->mysocket.get();
+		
 
 
 			std::cout << " string id " << realid << std::endl;
