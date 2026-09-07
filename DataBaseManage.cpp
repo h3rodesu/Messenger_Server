@@ -92,3 +92,28 @@ int DataBase::createRoom(int fid, int secid) {
 	tx.commit();
 	return curRoomId;
 }
+std::string DataBase::getChats(int myid) {
+	pqxx::connection connect(this->conn);
+	pqxx::work tx(connect);
+	std::string getch;
+	pqxx::result res=tx.exec_params("SELECT DISTINCT h2.room_id AS room_id, h2.user_id AS sobes_id, u.log as sobes_name "
+		"FROM users u "
+		"JOIN history h2 ON u.id = h2.user_id "
+		"JOIN history h1 ON h2.room_id = h1.room_id "
+		"WHERE h1.user_id = $1 "
+		"AND u.id != $1 ", myid);
+	
+	if (!res.empty()) {
+		std::stringstream ss;
+		ss << "GET_CHATS";
+		for (const auto& row : res) {
+			//std::string getch = res[0].as<std::string>() + "|" + res[1].as<std::string>() + "|" + res[2].as<std::string>();
+			ss << "|" << row["room_id"].as<int>()
+				<< "|" << row["sobes_id"].as<int>()
+				<< "|" << row["sobes_name"].as<std::string>();
+		}
+		ss << "\n";//соберу сразу готовую строку для сенд
+		getch = ss.str();
+		return getch;
+	}
+}

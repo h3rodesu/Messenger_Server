@@ -28,6 +28,6 @@ public:
 	void saveMsg(int nick_id, const std::string& mes, int room_id);
 	int finduser(std::string& name);
 	int createRoom(int fid, int secid);
-
+	std::string getChats(int myid);
 	~DataBase() {}
 };

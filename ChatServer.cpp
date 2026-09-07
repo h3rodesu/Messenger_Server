@@ -131,6 +131,9 @@ void ChatServer::handlClient(std::shared_ptr<SafeSocket>mySocket) {//Фонов�
 						}
 						send(mySocket->get(), nicelog.c_str(), (int)nicelog.size(), 0);
 						nick = parser.log;
+						std::string sendChats = this->db.getChats(myid);
+						send(mySocket->get(), sendChats.c_str(), (int)sendChats.size(), 0);
+						std::cout << "чаты отправлены : " << sendChats << std::endl;
 						break;
 					}
 					else {
@@ -257,6 +260,7 @@ void ChatServer::processClientMsg(std::shared_ptr<SafeSocket>sock, std::string n
 			}
 		}
 		else if (parser.command == "START_LS") {
+			
 			int userPasId = std::stoi(parser.message);
 			int curid;
 			{
