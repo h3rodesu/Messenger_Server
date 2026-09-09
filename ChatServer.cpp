@@ -161,7 +161,6 @@ void ChatServer::handlClient(std::shared_ptr<SafeSocket>mySocket) {//Фонов�
 					send(mySocket->get(), errorreg.c_str(), (int)errorreg.size(), 0);
 					parser.clean();
 				}
-			
 			}
 		}
 	}
@@ -232,7 +231,8 @@ void ChatServer::processClientMsg(std::shared_ptr<SafeSocket>sock, std::string n
 				std::unique_lock<std::mutex>myLock(this->mtx);
 				this->Map.erase(sock->get());
 			}
-			break;
+			//break;
+			this->handlClient(sock);
 		}
 		else if (parser.command == "CHANGE_NICK") {//а сам ник после | распарсится как сообщение
 			std::string newNick = parser.message;
