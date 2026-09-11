@@ -141,6 +141,8 @@
   <ItemGroup>
     <ClInclude Include="ChatServer.h" />
     <ClInclude Include="DataBaseManage.h" />
+    <ClInclude Include="httplib.h" />
+    <ClInclude Include="HttpMedia.h" />
     <ClInclude Include="HttpRequest.h" />
     <ClInclude Include="SafeSocket.h" />
     <ClInclude Include="ThreadPool.h" />
@@ -148,6 +150,7 @@
   <ItemGroup>
     <ClCompile Include="ChatServer.cpp" />
     <ClCompile Include="DataBaseManage.cpp" />
+    <ClCompile Include="HttpMedia.cpp" />
     <ClCompile Include="HttpRequest.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="ThreadPool.cpp" />
