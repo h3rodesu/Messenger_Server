@@ -23,7 +23,7 @@ Release/
 *.recipe
 *.idb
 .vs/
-
+uploads/
 
 Debug/
 Release/
@@ -42,3 +42,7 @@ obj/
 *.opendb
 *.sdf
 
+build/
+.cmake/
+CMakePresets.json
+vcpkg_installed/

@@ -1,0 +1,7 @@
+{
+  "name": "chat-server",
+  "version-string": "1.0.0",
+  "dependencies": [
+    "libpqxx"
+  ]
+}
