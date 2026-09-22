@@ -4,7 +4,7 @@
 
  Исходный код клиентского приложения доступен в репозитории https://github.com/h3rodesu/Client_For_Messenger
 <img width="390" height="239" alt="image" src="https://github.com/user-attachments/assets/f5b1923b-5eb0-487b-a078-e2f6932331eb" />
-
+Исходный код клиентского приложения доступен в репозитории https://github.com/h3rodesu/Client_For_Messenger
 **P.S.** Графический интерфейс отсутствует.
 ## Технологический стек
 * Язык программирования: C++20 (или выше)
