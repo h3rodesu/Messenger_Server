@@ -31,7 +31,8 @@
 * Компилятор с поддержкой стандарта C++20 или выше 
 * CMake версии 3.15 или выше
 * Установленный менеджер пакетов vcpkg (проект использует манифест vcpkg.json)
-
+* Запущенный PostgreSQL
+  
 ### Сборка через консоль (CMake)
 Выполните следующие команды в терминале из корневой папки проекта:
 
@@ -40,4 +41,12 @@ mkdir build
 cd build
 cmake .. -DCMAKE_TOOLCHAIN_FILE=[путь_до_vcpkg]/scripts/buildsystems/vcpkg.cmake
 cmake --build . --config Release
+```
+
+### Настройка базы данных
+
+Перед первым запуском необходимо создать базу данных:
+
+```sql
+CREATE DATABASE "Chat_Server_DataBase";
 ```
